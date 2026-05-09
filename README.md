@@ -1,6 +1,6 @@
 # CPU–GPU Parallel Correlation Matrix Benchmark
 
-This repository contains a benchmarking framework for computing large-scale \(N \times N\) correlation matrices from parallel time series data using GPU and CPU parallel computation strategies.
+This repository contains a benchmarking framework for computing large-scale N × N correlation matrices from parallel time series data using GPU and CPU parallel computation strategies.
 
 Developed for **DS3294 – DS Practice Project #9**.
 
@@ -10,7 +10,7 @@ Made by: **Sipra Subhadarsini Sahoo**
 
 # Project Overview
 
-Computing correlation matrices for thousands of time series is computationally intensive. For \(N\) time series of length \(T\), the computational complexity scales as:
+Computing correlation matrices for thousands of time series is computationally intensive. For N parallel time series, each of length T, the computational complexity scales as:
 
 O(N^2 * T)
 
@@ -56,7 +56,7 @@ via `torch.mm`.
 
 ### Limitations
 - High VRAM consumption
-- May fail for extremely large \(N\)
+- May fail for extremely large N
 
 ---
 
@@ -84,8 +84,8 @@ The project benchmarks and compares:
 - GPU blockwise computation
 
 across varying:
-- number of time series \(N\),
-- sequence lengths \(T\),
+- number of time series N,
+- sequence lengths T,
 - and block sizes.
 
 ---
@@ -147,7 +147,7 @@ Generated plots include:
 This project investigates:
 
 - When does GPU acceleration outperform CPU parallel computation?
-- How does runtime scale with increasing \(N\)?
+- How does runtime scale with increasing N ?
 - What are the memory trade-offs between computation strategies?
 - How effective is blockwise GPU computation under VRAM constraints?
 - How do empirical results compare with theoretical complexity?
