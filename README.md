@@ -12,9 +12,7 @@ Made by: **Sipra Subhadarsini Sahoo**
 
 Computing correlation matrices for thousands of time series is computationally intensive. For \(N\) time series of length \(T\), the computational complexity scales as:
 
-\[
-O(N^2 \cdot T)
-\]
+O(N^2 * T)
 
 As the dimensionality increases, both runtime and memory requirements grow rapidly.
 
@@ -48,9 +46,7 @@ A PyTorch CUDA implementation that computes the entire correlation matrix in one
 - Standardize time series (Z-score normalization)
 - Compute correlations using matrix multiplication:
 
-\[
-C = \frac{1}{T-1}XX^T
-\]
+C = (1 / (T - 1)) XXᵀ
 
 via `torch.mm`.
 
