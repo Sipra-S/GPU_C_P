@@ -1,7 +1,6 @@
+# GPU Correlation Matrix Benchmark Results
 
-# GPU Parallel Correlation Matrix Benchmark
-
-A GPU-accelerated benchmarking framework for large-scale correlation matrix computation using PyTorch CUDA.
+This repository presents benchmarking results for GPU-accelerated correlation matrix computation using PyTorch CUDA.
 
 Developed for **DS3294 – DS Practice Project #9**
 
@@ -9,130 +8,114 @@ Made by: **Sipra Subhadarsini Sahoo**
 
 ---
 
-# Project Overview
+# Experiment Overview
 
-This project investigates GPU-based parallel computation strategies for estimating large-scale correlation matrices from parallel time series data.
+The experiment benchmarks two GPU parallel processing strategies for computing large-scale correlation matrices:
 
-For `N` time series of length `T`, the computational complexity scales as:
+1. **GPU Full-Matrix Computation**
+2. **GPU Blockwise Computation**
+
+The benchmark evaluates:
+- execution time,
+- GPU VRAM usage,
+- and CPU → GPU transfer overhead.
+
+---
+
+# Experimental Configuration
+
+```text
+Number of Time Series (N) : 5000
+Length of Each Series (T) : 1000
+Block Size                : 1024
+Data Type                 : float32
+Framework                 : PyTorch CUDA
+```
+
+---
+
+# Correlation Matrix Complexity
+
+The computational complexity of correlation matrix estimation scales as:
 
 ```text
 O(N² · T)
 ```
 
-The project implements and benchmarks:
-
-- Full GPU Parallel Correlation Computation
-- Blockwise GPU Parallel Correlation Computation
-
-while analysing:
-- execution speed,
-- GPU memory usage,
-- and CPU → GPU transfer overhead.
-
----
-
-# Implemented GPU Strategies
-
-## 1. Full GPU Parallel Computation
-
-Computes the entire correlation matrix in a single GPU matrix multiplication operation using:
-
-```text
-C = (1 / (T - 1)) XXᵀ
-```
-
-### Advantages
-- Extremely fast
-- Maximizes GPU parallel throughput
-
-### Limitations
-- High VRAM consumption
-- Limited by GPU memory capacity
-
----
-
-## 2. Blockwise GPU Parallel Computation
-
-Computes the correlation matrix in smaller sub-blocks to reduce peak VRAM usage.
-
-### Advantages
-- Memory efficient
-- Handles larger datasets
-
-### Trade-off
-- Slightly slower due to chunked computation
-
----
-
-# Benchmarking Features
-
-The framework measures:
-
-- Execution Time
-- Peak GPU VRAM Usage
-- CPU → GPU Transfer Time
-
-for both GPU computation strategies.
+which becomes computationally expensive for large-scale datasets.
 
 ---
 
 # Benchmark Results
 
-The following benchmark was performed for:
-
-```text
-N = 5000
-T = 1000
-Block Size = 1024
-```
-
----
-
-# Execution Time Comparison
+## 1. Execution Time Comparison
 
 <p align="center">
   <img src="images/execution_time_comparison.png" width="500">
 </p>
 
+### Analysis
+
+- Both GPU strategies achieve extremely fast execution times.
+- Blockwise GPU computation performs slightly faster in this benchmark configuration.
+- The difference in runtime is minimal, demonstrating efficient GPU parallelism.
+
 ### Observation
 
-- Blockwise GPU computation performs comparably to full GPU computation.
-- GPU parallel matrix multiplication achieves extremely low execution times.
-- The overhead introduced by blockwise computation remains small.
+GPU-based matrix multiplication using CUDA significantly accelerates correlation matrix computation for large datasets.
 
 ---
 
-# Peak VRAM Usage
+## 2. Peak GPU VRAM Usage
 
 <p align="center">
   <img src="images/vram_usage_comparison.png" width="500">
 </p>
 
+### Analysis
+
+- Blockwise GPU computation consumes more VRAM in this experiment due to intermediate block allocations.
+- Full GPU computation shows lower memory usage for the chosen dataset size.
+- As dataset dimensionality increases further, blockwise computation becomes necessary to prevent GPU memory overflow.
+
 ### Observation
 
-- Full GPU computation uses lower VRAM for this dataset size.
-- Blockwise computation introduces additional intermediate allocations.
-- For larger datasets, blockwise computation becomes essential to avoid VRAM overflow.
+Memory-efficient computation strategies become increasingly important for very large correlation matrices.
 
 ---
 
-# CPU → GPU Transfer Time
+## 3. CPU → GPU Transfer Time
 
 <p align="center">
   <img src="images/transfer_time_comparison.png" width="500">
 </p>
 
+### Analysis
+
+- Data transfer overhead between CPU and GPU remains relatively small.
+- Transfer times are nearly identical for both strategies because the same dataset is transferred to GPU memory.
+- Computation time dominates overall runtime for large-scale workloads.
+
 ### Observation
 
-- Data transfer overhead is relatively small compared to total computation time.
-- GPU acceleration remains highly beneficial for large-scale matrix operations.
+GPU acceleration remains advantageous despite transfer overhead for high-dimensional numerical computation.
+
+---
+
+# Key Findings
+
+- GPU parallel computation provides extremely fast correlation matrix estimation.
+- Full GPU computation is highly efficient for moderate dataset sizes.
+- Blockwise GPU computation enables scalable processing under memory constraints.
+- CPU → GPU transfer overhead is comparatively small relative to matrix computation cost.
+- GPU-based matrix multiplication is highly effective for large-scale scientific computing workloads.
 
 ---
 
 # Technologies Used
 
 - Python
-- PyTorch (CUDA)
+- PyTorch CUDA
 - NumPy
 - Matplotlib
 
@@ -152,7 +135,7 @@ Block Size = 1024
 
 ---
 
-# How to Run
+# Running the Benchmark
 
 ## Install Dependencies
 
@@ -160,11 +143,9 @@ Block Size = 1024
 pip install torch numpy matplotlib
 ```
 
-CUDA-enabled PyTorch is strongly recommended.
-
 ---
 
-## Run Benchmark
+## Run the Script
 
 ```bash
 python gpu_benchmark.py
@@ -172,22 +153,9 @@ python gpu_benchmark.py
 
 ---
 
-# Example Experiment
+# Conclusion
 
-```python
-run_experiment(
-    N=5000,
-    T=1000,
-    block_size=1024
-)
-```
-
----
-
-# Expected Outcome
-
-This project demonstrates:
-- large-scale GPU parallel computation,
-- efficient matrix operations using CUDA,
-- memory-aware blockwise processing,
-- and practical benchmarking of GPU scientific workloads.
+This benchmark demonstrates the effectiveness of GPU parallel processing for large-scale correlation matrix estimation and highlights the trade-offs between:
+- execution speed,
+- memory consumption,
+- and scalable GPU computation strategies.
