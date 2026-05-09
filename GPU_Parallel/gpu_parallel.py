@@ -11,9 +11,9 @@ using two GPU parallel processing strategies:
 The script measures:
 - Execution Time
 - Peak GPU VRAM Usage
-- GPU Scalability
+- CPU → GPU Transfer Time
 
-and visualizes performance using Matplotlib.
+and generates separate benchmarking plots using Matplotlib.
 """
 
 import torch
@@ -27,8 +27,9 @@ import matplotlib.pyplot as plt
 # =============================================================================
 def get_device():
     """
-    Detect CUDA-enabled GPU and return device object.
+    Detect CUDA-enabled GPU.
     """
+
     if torch.cuda.is_available():
 
         device = torch.device("cuda")
@@ -41,8 +42,8 @@ def get_device():
         )
 
         print("\n[GPU DETECTED]")
-        print(f"Device       : {gpu_name}")
-        print(f"VRAM         : {total_mem:.2f} GB")
+        print(f"Device : {gpu_name}")
+        print(f"VRAM   : {total_mem:.2f} GB")
 
     else:
         raise RuntimeError(
@@ -61,45 +62,50 @@ def generate_time_series(
     seed: int = 42
 ):
     """
-    Generate synthetic float32 time-series dataset.
+    Generate synthetic dataset.
     """
 
     rng = np.random.default_rng(seed)
 
-    data = rng.standard_normal((N, T)).astype(np.float32)
+    data = rng.standard_normal(
+        (N, T)
+    ).astype(np.float32)
 
-    size_mb = data.nbytes / (1024 ** 2)
+    size_mb = (
+        data.nbytes / (1024 ** 2)
+    )
 
     print("\n[DATASET]")
-    print(f"Time Series  : {N}")
-    print(f"Length       : {T}")
-    print(f"Dataset Size : {size_mb:.2f} MB")
+    print(f"Time Series : {N}")
+    print(f"Length      : {T}")
+    print(f"Size         : {size_mb:.2f} MB")
 
     return data
 
 
 # =============================================================================
-# SECTION 3: FULL GPU PARALLEL CORRELATION
+# SECTION 3: FULL GPU CORRELATION
 # =============================================================================
 def gpu_correlation_full(
     data: np.ndarray,
     device: torch.device
 ):
     """
-    Compute full N × N correlation matrix on GPU.
+    Full GPU parallel correlation computation.
     """
 
-    print("\n==================================================")
+    print("\n================================================")
     print("RUNNING FULL GPU PARALLEL COMPUTATION")
-    print("==================================================")
+    print("================================================")
 
     torch.cuda.empty_cache()
+
     torch.cuda.reset_peak_memory_stats()
 
     start = time.perf_counter()
 
     # -------------------------------------------------------------------------
-    # Transfer data to GPU
+    # Transfer to GPU
     # -------------------------------------------------------------------------
     transfer_start = time.perf_counter()
 
@@ -113,12 +119,17 @@ def gpu_correlation_full(
 
     transfer_end = time.perf_counter()
 
-    transfer_time = transfer_end - transfer_start
+    transfer_time = (
+        transfer_end - transfer_start
+    )
 
     # -------------------------------------------------------------------------
-    # Z-score normalization
+    # Standardization
     # -------------------------------------------------------------------------
-    mean = X.mean(dim=1, keepdim=True)
+    mean = X.mean(
+        dim=1,
+        keepdim=True
+    )
 
     std = X.std(
         dim=1,
@@ -126,16 +137,21 @@ def gpu_correlation_full(
         unbiased=False
     )
 
-    std = torch.clamp(std, min=1e-8)
+    std = torch.clamp(
+        std,
+        min=1e-8
+    )
 
     Z = (X - mean) / std
 
     # -------------------------------------------------------------------------
-    # Correlation matrix computation
+    # Correlation Matrix
     # -------------------------------------------------------------------------
     T = data.shape[1]
 
-    corr_matrix = torch.mm(Z, Z.T) / T
+    corr_matrix = (
+        torch.mm(Z, Z.T) / T
+    )
 
     corr_matrix = torch.clamp(
         corr_matrix,
@@ -154,9 +170,9 @@ def gpu_correlation_full(
         / (1024 ** 2)
     )
 
-    print(f"Execution Time     : {execution_time:.4f} s")
-    print(f"Transfer Time      : {transfer_time:.4f} s")
-    print(f"Peak VRAM Usage    : {peak_vram:.2f} MB")
+    print(f"Execution Time  : {execution_time:.4f} s")
+    print(f"Transfer Time   : {transfer_time:.4f} s")
+    print(f"Peak VRAM Usage : {peak_vram:.2f} MB")
 
     return (
         corr_matrix,
@@ -167,7 +183,7 @@ def gpu_correlation_full(
 
 
 # =============================================================================
-# SECTION 4: BLOCKWISE GPU PARALLEL CORRELATION
+# SECTION 4: BLOCKWISE GPU CORRELATION
 # =============================================================================
 def gpu_correlation_blockwise(
     data: np.ndarray,
@@ -175,21 +191,21 @@ def gpu_correlation_blockwise(
     block_size: int = 512
 ):
     """
-    Compute correlation matrix in GPU blocks
-    to reduce VRAM consumption.
+    Memory-efficient blockwise GPU correlation computation.
     """
 
-    print("\n==================================================")
-    print("RUNNING BLOCKWISE GPU PARALLEL COMPUTATION")
-    print("==================================================")
+    print("\n================================================")
+    print("RUNNING BLOCKWISE GPU COMPUTATION")
+    print("================================================")
 
     torch.cuda.empty_cache()
+
     torch.cuda.reset_peak_memory_stats()
 
     start = time.perf_counter()
 
     # -------------------------------------------------------------------------
-    # Transfer data to GPU
+    # Transfer to GPU
     # -------------------------------------------------------------------------
     transfer_start = time.perf_counter()
 
@@ -203,14 +219,19 @@ def gpu_correlation_blockwise(
 
     transfer_end = time.perf_counter()
 
-    transfer_time = transfer_end - transfer_start
+    transfer_time = (
+        transfer_end - transfer_start
+    )
 
     # -------------------------------------------------------------------------
     # Standardization
     # -------------------------------------------------------------------------
     N, T = data.shape
 
-    mean = X.mean(dim=1, keepdim=True)
+    mean = X.mean(
+        dim=1,
+        keepdim=True
+    )
 
     std = X.std(
         dim=1,
@@ -218,12 +239,15 @@ def gpu_correlation_blockwise(
         unbiased=False
     )
 
-    std = torch.clamp(std, min=1e-8)
+    std = torch.clamp(
+        std,
+        min=1e-8
+    )
 
     Z = (X - mean) / std
 
     # -------------------------------------------------------------------------
-    # Blockwise correlation matrix computation
+    # Blockwise Correlation Matrix
     # -------------------------------------------------------------------------
     corr_matrix = torch.zeros(
         (N, N),
@@ -238,18 +262,26 @@ def gpu_correlation_blockwise(
     for i in range(num_blocks):
 
         i_start = i * block_size
-        i_end = min(i_start + block_size, N)
+        i_end = min(
+            i_start + block_size,
+            N
+        )
 
         Zi = Z[i_start:i_end, :]
 
         for j in range(i, num_blocks):
 
             j_start = j * block_size
-            j_end = min(j_start + block_size, N)
+            j_end = min(
+                j_start + block_size,
+                N
+            )
 
             Zj = Z[j_start:j_end, :]
 
-            block_corr = torch.mm(Zi, Zj.T) / T
+            block_corr = (
+                torch.mm(Zi, Zj.T) / T
+            )
 
             corr_matrix[
                 i_start:i_end,
@@ -280,9 +312,9 @@ def gpu_correlation_blockwise(
         / (1024 ** 2)
     )
 
-    print(f"Execution Time     : {execution_time:.4f} s")
-    print(f"Transfer Time      : {transfer_time:.4f} s")
-    print(f"Peak VRAM Usage    : {peak_vram:.2f} MB")
+    print(f"Execution Time  : {execution_time:.4f} s")
+    print(f"Transfer Time   : {transfer_time:.4f} s")
+    print(f"Peak VRAM Usage : {peak_vram:.2f} MB")
 
     return (
         corr_matrix,
@@ -293,7 +325,7 @@ def gpu_correlation_blockwise(
 
 
 # =============================================================================
-# SECTION 5: PERFORMANCE VISUALIZATION
+# SECTION 5: SEPARATE PERFORMANCE PLOTS
 # =============================================================================
 def plot_comparisons(
     N,
@@ -303,7 +335,7 @@ def plot_comparisons(
     transfers
 ):
     """
-    Generate GPU benchmarking visualizations.
+    Generate and save separate benchmarking plots.
     """
 
     labels = [
@@ -311,45 +343,78 @@ def plot_comparisons(
         "GPU Blockwise"
     ]
 
-    fig, axes = plt.subplots(
-        1,
-        3,
-        figsize=(16, 5)
+    # =========================================================
+    # EXECUTION TIME PLOT
+    # =========================================================
+    plt.figure(figsize=(6, 5))
+
+    plt.bar(labels, times)
+
+    plt.title(
+        f"Execution Time Comparison\nN={N}, T={T}"
     )
 
-    fig.suptitle(
-        f"GPU Benchmarking | N={N}, T={T}",
-        fontsize=15
+    plt.ylabel("Time (seconds)")
+
+    plt.tight_layout()
+
+    plt.savefig(
+        "execution_time_comparison.png",
+        dpi=300,
+        bbox_inches="tight"
     )
 
-    # -------------------------------------------------------------------------
-    # Execution Time Plot
-    # -------------------------------------------------------------------------
-    axes[0].bar(labels, times)
+    plt.show()
 
-    axes[0].set_title(
-        "Execution Time"
+    # =========================================================
+    # VRAM USAGE PLOT
+    # =========================================================
+    plt.figure(figsize=(6, 5))
+
+    plt.bar(labels, memories)
+
+    plt.title(
+        f"Peak VRAM Usage\nN={N}, T={T}"
     )
 
-    axes[0].set_ylabel(
-        "Seconds"
+    plt.ylabel("Memory (MB)")
+
+    plt.tight_layout()
+
+    plt.savefig(
+        "vram_usage_comparison.png",
+        dpi=300,
+        bbox_inches="tight"
     )
 
-    # -------------------------------------------------------------------------
-    # VRAM Usage Plot
-    # -------------------------------------------------------------------------
-    axes[1].bar(labels, memories)
+    plt.show()
 
-    axes[1].set_title(
-        "Peak VRAM Usage"
+    # =========================================================
+    # TRANSFER TIME PLOT
+    # =========================================================
+    plt.figure(figsize=(6, 5))
+
+    plt.bar(labels, transfers)
+
+    plt.title(
+        f"CPU → GPU Transfer Time\nN={N}, T={T}"
     )
 
-    axes[1].set_ylabel(
-        "Memory (MB)"
+    plt.ylabel("Time (seconds)")
+
+    plt.tight_layout()
+
+    plt.savefig(
+        "transfer_time_comparison.png",
+        dpi=300,
+        bbox_inches="tight"
     )
+
+    plt.show()
+
 
 # =============================================================================
-# SECTION 6: MAIN EXPERIMENT DRIVER
+# SECTION 6: MAIN EXPERIMENT
 # =============================================================================
 def run_experiment(
     N: int,
@@ -393,7 +458,7 @@ def run_experiment(
     )
 
     # -------------------------------------------------------------------------
-    # Visualization
+    # Generate Plots
     # -------------------------------------------------------------------------
     plot_comparisons(
         N,
